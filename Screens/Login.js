@@ -1,151 +1,194 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Dimensions, TextInput, ToastAndroid, Button } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
-import auth from '@react-native-firebase/auth'; // Import Firebase Auth
-
+import auth from '@react-native-firebase/auth';
 
 const Login = () => {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [errorMessage,setErrorMessage] = useState('Enter your credentials');
-  const handleLogin = async () => {
-    try {
-      if (!email || !password) {
-        setErrorMessage('Please fill in both email and password');
-        return;
-      }
-      await auth().signInWithEmailAndPassword(email, password);
-      setIsLoggedIn(true);
-      // Replace the current screen with the mainScreen
-      navigation.replace('mainScreen');
-    } catch (error) {
-      if (error.code === 'auth/invalid-email' || error.code === 'auth/user-not-found') {
-        setErrorMessage('Invalid email');
-      } else if (error.code === 'auth/wrong-password') {
-        setErrorMessage('Invalid password');
-      } else {
-        setErrorMessage('Invalid Email or Password');
-      }
-    }
-  };
-  
-  
+    const screenWidth = Dimensions.get('window').width;
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const navigation = useNavigation();
 
-  const handleSignUp = () => {
-    navigation.navigate('signUpScreen');
-  };
+    const handleGoToLogRegScreen = () => {
+        navigation.navigate('logRegScreen');
+    };
+    
+      const showToastWithGravity = (errorMessage) => {
+        ToastAndroid.showWithGravity(
+          errorMessage,
+          ToastAndroid.SHORT,
+          ToastAndroid.CENTER,
+        );
+      };
+    
+      
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.welcomeMessage}>Welcome to Notely. Please sign in.</Text>
-      <Text style={{color:'red'}}>{errorMessage}</Text>
-      {!isLoggedIn && (
-        <>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            onChangeText={setEmail}
-            value={email}
-            keyboardType="email-address"
-            placeholderTextColor={"#DEDEDE"}
-          />
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            onChangeText={setPassword}
-            value={password}
-            secureTextEntry
-            placeholderTextColor={"#DEDEDE"}
-          />
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Log In</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.footerText}>
-            Already have an account?{' '}
-            <Text style={styles.signInLink} onPress={handleSignUp}>
-              Sign Up
-            </Text>
-          </Text>
-        </>
-      )}
+    const handleLogin = () => {
+        if(!email){
+            showToastWithGravity('Enter you email correctly')
+            return
+        }
+        if(!password){
+            showToastWithGravity('Enter you password')
+            return
+        }
+        auth()
+            .signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                if (user.emailVerified) {
+                    showToastWithGravity('User logged in successfully')
+                    navigation.replace('mainScreen');
+                } else {
+                    showToastWithGravity('Please verify your email before logging in.')
+                }
+            })
+            .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                let toastMessage = '';
+            
+                switch (errorCode) {
+                    case 'auth/invalid-email':
+                        showToastWithGravity('Invalid email address');
+                        toastMessage = 'Invalid email address';
+                        break;
+                    case 'auth/user-disabled':
+                        showToastWithGravity('Your account has been disabled');
+                        break;
+                    case 'auth/user-not-found':
+                        showToastWithGravity('User not found');
+                        break;
+                    case 'auth/wrong-password':
+                        showToastWithGravity('Incorrect password');
+                        break;
+                    case 'auth/invalid-credential':
+                        showToastWithGravity('Invalid email or password');
+                        break;
+                    // Add more cases for other error codes as needed
+                    default:
+                        showToastWithGravity('Something went wrong');
+                        
+                        break;
+                }
+            
+                setErrorMessage(errorMessage);
+
+            });
+            
+    };
+
+    return (
+        <View style={{ height: '100%', justifyContent: 'space-between', alignItems: 'center', paddingTop: 20, width: '100%' }}>
+            <View onPress={handleGoToLogRegScreen} style={{ flexDirection: 'row', justifyContent: 'space-around', width: '100%',alignItems:'center' }}>
+                <TouchableOpacity onPress={handleGoToLogRegScreen}>
+                    <Image source={require('../Images/leftArrowPng.png')} style={{ alignItems: 'center',height:25,width:25,resizeMode:'contain' }} />
+                </TouchableOpacity>
+                <Text style={{ textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#000', alignItems: 'center' }}>Login</Text>
+                <View></View>
+            </View>
+
+            <View>
+      
+      
     </View>
-  );
-};
+            <View style={{ gap: 25, justifyContent: 'center', flex: 1 }}>
+                <View>
+                    <View>
+                        <View
+                            activeOpacity={1}
+                            style={{
+                                width: screenWidth * 0.81,
+                                height: 59,
+                                position: 'absolute',
+                                zIndex: 0,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                top: 0,
+                                left: 0,
+                                overflow: 'hidden',
+                                borderBottomWidth: 5,
+                                borderRightWidth: 5,
+                                borderBottomLeftRadius: 10,
+                                borderTopRightRadius: 10,
+                                borderTopColor: 'white',
+                                borderLeftColor: 'white',
+                                overflow: 'hidden'
+                            }}>
+                        </View>
+                        <View activeOpacity={1} style={{
+                            width: screenWidth * 0.80,
+                            height: 55,
+                            borderWidth: 2,
+                            paddingHorizontal: 10,
+                            alignItems: 'center',
+                            position: 'relative',
+                            zIndex: 1,
+                            flexDirection: 'row',
+                        }}>
+                            <View style={{ borderRightWidth: 2, height: '100%', justifyContent: 'center', width: 100 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#000', overflow: 'hidden', fontFamily: 'Inter-Bold' }}>Email</Text>
+                            </View>
+                            <TextInput onChangeText={setEmail} placeholder={'e.g. john@gmail.com'} placeholderTextColor={'#0007'} secureTextEntry={false} style={{ fontSize: 14, width: '65%', paddingLeft: 10, fontFamily: 'Inter-Regular',color:'#000' }} />
+                        </View>
+                    </View>
+                </View>
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: '#1e1e1e', // Background color set to #1e1e1e
-  },
-  welcomeMessage: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#DEDEDE',
-    marginBottom: 20,
-  },
-  label: {
-    alignSelf: 'flex-start',
-    marginBottom: 5,
-    color: '#DEDEDE', // Font color set to #DEDEDE
-  },
-  input: {
-    width: '100%',
-    height: 40,
-    borderColor: '#555', // Darker border color for contrast
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-    color: '#dedede', // Text color set to #dedede
-    backgroundColor: '#333', // Input background color set to #333 for contrast
-  },
-  successMessage: {
-    fontSize: 16,
-    color: '#3bb143', // Success message color set to green
-    marginTop: 20,
-  },
-  buttonContainer: {
-    marginTop: 20,
-    width: '100%', // Set the width to 80% of the parent container
-  },
-  loginButton: {
-    backgroundColor: '#DEDEDE', // Button background color set to a light blue shade
-    borderRadius: 5,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color:'#1e1e1e',
-    fontWeight: 'bold',
-  },
-  signUpText: {
-    color: '#3ca4ff', // Sign-up text color set to a light blue shade
-    marginTop: 10,
-    textDecorationLine: 'underline', // Underline the sign-up text
-  },
-  footerText: {
-    marginTop: 20,
-    color: '#dedede', // Text color set to #dedede
-  },
-  signInLink: {
-    color: '#3ca4ff', // Link color set to a light blue shade
-    fontWeight: 'bold', // Make the link text bold
-  },
-  error: {
-    color: '#ff3d3d', // Error message color set to a red shade
-    marginBottom: 10,
-    textAlign: 'center', // Center the error message text
-  },
-});
+                {/*Password*/}
+                <View>
+                    <View>
+                        <View
+                            activeOpacity={1}
+                            style={{
+                                width: screenWidth * 0.81,
+                                height: 59,
+                                position: 'absolute',
+                                zIndex: 0,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                top: 0,
+                                left: 0,
+                                overflow: 'hidden',
+                                borderBottomWidth: 5,
+                                borderRightWidth: 5,
+                                borderBottomLeftRadius: 10,
+                                borderTopRightRadius: 10,
+                                borderTopColor: 'white',
+                                borderLeftColor: 'white',
+                                overflow: 'hidden'
+                            }}>
+                        </View>
+                        <View activeOpacity={1} style={{
+                            width: screenWidth * 0.80,
+                            height: 55,
+                            borderWidth: 2,
+                            paddingHorizontal: 10,
+                            alignItems: 'center',
+                            position: 'relative',
+                            zIndex: 1,
+                            flexDirection: 'row',
+                        }}>
+                            <View style={{ borderRightWidth: 2, height: '100%', justifyContent: 'center', width: 100 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#000', overflow: 'hidden', fontFamily: 'Inter-Bold' }}>Password</Text>
+                            </View>
+                            <TextInput onChangeText={setPassword} placeholder={'e.g. john@123'} placeholderTextColor={'#0007'} secureTextEntry={true} style={{ fontSize: 14, width: '65%', paddingLeft: 10, fontFamily: 'Inter-Regular',color:'#000' }} />
+                        </View>
+                    </View>
+                </View>
+                
+            </View>
+            <TouchableOpacity activeOpacity={1} onPress={handleLogin} style={{
+                borderTopColor: '#000',
+                borderTopWidth: 1.5,
+                paddingVertical: 15,
+                width: '100%',
+                overflow: 'hidden',
+            }}>
+                <Text style={{ textAlign: 'center', fontSize: 20, color: '#000000' }}>Login</Text>
+            </TouchableOpacity>
+        </View>
+    )
+}
 
 export default Login;

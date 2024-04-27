@@ -1,171 +1,325 @@
-import React, {useState} from 'react';
-import {
-  View,
-  TextInput,
-  Button,
-  StyleSheet,
-  Text,
-  Alert,
-  TouchableOpacity,
-} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { View, Text, TouchableOpacity, Image, Dimensions, TextInput,ToastAndroid } from 'react-native'
+import React, { useState } from 'react'
+import LoginSignupComponents from '../components/LoginSignupComponents'
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore'; // Import Firestore
+import firestore from '@react-native-firebase/firestore';
 
-const CommonTouchable = ({onPress, children}) => (
-  <TouchableOpacity style={styles.commonTouchable} onPress={onPress}>
-    {children}
-  </TouchableOpacity>
-);
+const SignUpScreen = ({ navigation }) => {
+  
+  const screenWidth = Dimensions.get('window').width;
+  const handleGoToLogin = () => {
+    navigation.navigate('loginScreen')
+  }
 
-const SignUpScreen = () => {
-  const navigation = useNavigation();
+  const handleGoToLogRegScreen = () => {
+    navigation.navigate('logRegScreen')
+  }
+
+  const showToastWithGravity = (errorMessage) => {
+    ToastAndroid.showWithGravity(
+      errorMessage,
+      ToastAndroid.SHORT,
+      ToastAndroid.CENTER,
+    );
+  };
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
 
-  const handleSignUp = async () => {
-    try {
-      // Reset error state
-      setError(null);
 
-      // Create user in Firebase Authentication
-      const userCredential = await auth().createUserWithEmailAndPassword(
-        email,
-        password,
-      );
-      const uid = userCredential.user.uid;
-
-      // Save user data to Firestore
-      await firestore().collection('users').doc(uid).set({
-        username: username,
-        email: email,
-      });
-      await userCredential.user.sendEmailVerification();
-
-      // Optionally, you can provide feedback to the user that the verification email has been sent
-      Alert.alert('Verification Email Sent', 'Please check your email inbox to verify your account.');
+  const handleRegister = () => {
+    // Reset any previous error messages
+    setError(null);
   
-      Alert.alert('User Created');
-
-      // Navigate back to the sign-in screen
-      navigation.navigate('loginScreen');
-    } catch (error) {
-      setError(error.message);
+    // Add validation logic here if necessary
+    if(!username || !email || !password || !confirmPassword){
+      showToastWithGravity('Please fill all the details');
+      return
     }
+    
+    // Check if password and confirm password match
+    if (password !== confirmPassword) {
+      showToastWithGravity("Passwords don't match");
+      return;
+    }
+  
+  
+    // Create user account with email and password
+    auth()
+      .createUserWithEmailAndPassword(email, password)
+      .then((userCredential) => {
+        // User created successfully
+        const user = userCredential.user;
+  
+        // Send verification email
+        user.sendEmailVerification()
+          .then(() => {
+            showToastWithGravity('Verification email sent');
+            setUsername('');
+            setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+          })
+          .catch(error => {
+            showToastWithGravity('Error sending verification email',);
+          });
+  
+        // Save additional user data to Firestore
+        firestore()
+  .collection('users')
+  .doc(user.uid) // Set the document ID to the user's UID
+  .set({
+    username: username,
+    email: email,
+    
+  })
+  .then(() => {
+    showToastWithGravity('User registered successfully and data saved to Firestore!');
+    // You can navigate to another screen or show a success message here
+  })
+  .catch(error => {
+    showToastWithGravity('Error saving user data');
+  });
+      })
+      .catch(error => {
+        
+        let errorMessage;
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            showToastWithGravity('Email address is already in use.');
+            break;
+          case 'auth/invalid-email':
+            showToastWithGravity('Invalid email address.');
+            break;
+          case 'auth/weak-password':
+            showToastWithGravity('Password should be at least 6 characters.');
+            break;
+          default:
+            showToastWithGravity('Registration failed. Please try again later.');
+            break;
+        }
+        setError(errorMessage);
+      });
   };
 
+  
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Sign Up</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter username"
-        onChangeText={setUsername}
-        value={username}
-        onFocus={() => setError(null)}
-        placeholderTextColor={'#DEDEDE'}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Enter email"
-        onChangeText={setEmail}
-        value={email}
-        keyboardType="email-address"
-        onFocus={() => setError(null)}
-        placeholderTextColor={'#DEDEDE'}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Enter password"
-        onChangeText={setPassword}
-        value={password}
-        secureTextEntry
-        onFocus={() => setError(null)}
-        placeholderTextColor={'#DEDEDE'}
-      />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.loginButton} onPress={handleSignUp}>
-              <Text style={styles.buttonText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-      <Text style={styles.footerText}>
-        Already have an account?{' '}
-        <Text
-          style={styles.signInLink}
-          onPress={() => navigation.navigate('loginScreen')}>
-          Sign In
-        </Text>
-      </Text>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+    <View style={{ height: '100%', justifyContent: 'space-between', alignItems: 'center', paddingTop: 20,width:'100%' }}>
+      <TouchableOpacity onPress={handleGoToLogRegScreen} style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%',paddingHorizontal:25,alignItems:'center' }}>
+        <Image source={require('../Images/leftArrowPng.png')} style={{ alignItems: 'center',height:25,width:25,resizeMode:'contain' }} />
+        <Text style={{ textAlign: 'right', fontSize: 18, fontWeight: 'bold', color: '#000', alignItems: 'center' }}>Register</Text>
+        <View></View>
+      </TouchableOpacity>
+      <View style={{ gap: 25, justifyContent: 'center', flex: 1, alignItems: 'flex-end' }}>
+      
+      {/* Username */}
+      <View>
+      
+      <View  >
+      <View
+       
+  activeOpacity={1}
+  style={{
+    width: screenWidth * 0.81,
+    height: 59,
+    position: 'absolute',
+    zIndex: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: '#1e1e1e', // Background color set to #1e1e1e
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#dedede', // Text color set to #dedede
-  },
-  input: {
-    width: '100%',
-    height: 40,
-    borderColor: '#555', // Darker border color for contrast
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-    color: '#dedede', // Text color set to #dedede
-    backgroundColor: '#333', // Input background color set to #333 for contrast
-  },
-  commonTouchable: {
-    width: '100%',
-    backgroundColor: '#3ca4ff', // Button background color set to a light blue shade
-    borderRadius: 5,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF', // Button text color set to white
-    fontWeight: 'bold',
-  },
-  footerText: {
-    marginTop: 20,
-    color: '#dedede', // Text color set to #dedede
-  },
-  signInLink: {
-    color: '#3ca4ff', // Link color set to a light blue shade
-    fontWeight: 'bold', // Make the link text bold
-  },
-  error: {
-    color: '#ff3d3d', // Error message color set to a red shade
-    marginBottom: 10,
-    textAlign: 'center', // Center the error message text
-  },
-  buttonContainer: {
-    marginTop: 20,
-    width: '100%', // Set the width to 80% of the parent container
-  },
-  loginButton: {
-    backgroundColor: '#DEDEDE', // Button background color set to a light blue shade
-    borderRadius: 5,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color:'#1e1e1e',
-    fontWeight: 'bold',
-  },
-});
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+    borderBottomWidth: 5,
+    borderRightWidth: 5,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10, // Adjust this value as needed for your desired pointy border effect
+    borderTopColor: 'white',
+    borderLeftColor: 'white',
+    overflow:'hidden'
+    
+  }}>
+</View>
 
-export default SignUpScreen;
+        <View style={{
+        width: screenWidth*0.80,
+        height: 55,
+        borderWidth:2,
+        paddingHorizontal:10,
+        alignItems: 'center',
+        position: 'relative',
+        zIndex:1,
+        flexDirection:'row',
+      }}>
+        <View style={{borderRightWidth:2,height:'100%',justifyContent:'center',width:100}}>
+            <Text style={{fontSize:16,fontWeight:'bold',color:'#000',overflow:'hidden',fontFamily:'Inter-Bold'}}>Username</Text>
+        </View>
+          <TextInput value={username} onChangeText={setUsername} placeholder='e.g. john Doe' placeholderTextColor={'#0007'} secureTextEntry={false} style={{fontSize:14,width:'65%',paddingLeft:10,fontFamily:'Inter-Regular',color:"#000"}} />
+        </View>
+        </View>
+
+    </View>
+
+ {/* Email */}
+    <View>
+      
+      <View>
+      <View
+       
+  activeOpacity={1}
+  style={{
+    width: screenWidth * 0.81,
+    height: 59,
+    position: 'absolute',
+    zIndex: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+    borderBottomWidth: 5,
+    borderRightWidth: 5,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10, // Adjust this value as needed for your desired pointy border effect
+    borderTopColor: 'white',
+    borderLeftColor: 'white',
+    overflow:'hidden'
+    
+  }}>
+</View>
+
+        <View  style={{
+        width: screenWidth*0.80,
+        height: 55,
+        borderWidth:2,
+        paddingHorizontal:10,
+        alignItems: 'center',
+        position: 'relative',
+        zIndex:1,
+        flexDirection:'row',
+      }}>
+        <View style={{borderRightWidth:2,height:'100%',justifyContent:'center',width:100}}>
+            <Text style={{fontSize:16,fontWeight:'bold',color:'#000',overflow:'hidden',fontFamily:'Inter-Bold'}}>Email</Text>
+        </View>
+          <TextInput value={email} onChangeText={setEmail} placeholder='e.g. john@gmail.com' placeholderTextColor={'#0007'} secureTextEntry={false}  style={{fontSize:14,width:'65%',paddingLeft:10,fontFamily:'Inter-Regular',color:"#000"}}/>
+        </View>
+        </View>
+
+    </View>
+
+ {/* Password */}
+
+    <View>
+      
+      <View  >
+      <View
+       
+  style={{
+    width: screenWidth * 0.81,
+    height: 59,
+    position: 'absolute',
+    zIndex: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+    borderBottomWidth: 5,
+    borderRightWidth: 5,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10, // Adjust this value as needed for your desired pointy border effect
+    borderTopColor: 'white',
+    borderLeftColor: 'white',
+    overflow:'hidden'
+    
+  }}>
+</View>
+
+        <View style={{
+        width: screenWidth*0.80,
+        height: 55,
+        borderWidth:2,
+        paddingHorizontal:10,
+        alignItems: 'center',
+        position: 'relative',
+        zIndex:1,
+        flexDirection:'row',
+      }}>
+        <View style={{borderRightWidth:2,height:'100%',justifyContent:'center',width:100}}>
+            <Text style={{fontSize:16,fontWeight:'bold',color:'#000',overflow:'hidden',fontFamily:'Inter-Bold'}}>Password</Text>
+        </View>
+          <TextInput value={password} onChangeText={setPassword} placeholder='e.g. john123' placeholderTextColor={'#0007'} secureTextEntry={true} style={{fontSize:14,width:'65%',paddingLeft:10,fontFamily:'Inter-Regular',color:"#000"}}/>
+        </View>
+        </View>
+
+    </View>
+
+ {/* Confirm Password */}
+
+        
+
+ <View>
+      
+      <View  >
+      <View
+       
+  style={{
+    width: screenWidth * 0.81,
+    height: 59,
+    position: 'absolute',
+    zIndex: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+    borderBottomWidth: 5,
+    borderRightWidth: 5,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10, // Adjust this value as needed for your desired pointy border effect
+    borderTopColor: 'white',
+    borderLeftColor: 'white',
+    overflow:'hidden'
+    
+  }}>
+</View>
+
+        <View style={{
+        width: screenWidth*0.80,
+        height: 55,
+        borderWidth:2,
+        paddingHorizontal:10,
+        alignItems: 'center',
+        position: 'relative',
+        zIndex:1,
+        flexDirection:'row',
+      }}>
+        <View style={{borderRightWidth:2,height:'100%',justifyContent:'center',width:100}}>
+            <Text style={{fontSize:16,fontWeight:'bold',color:'#000',overflow:'hidden',fontFamily:'Inter-Bold'}}>Confirm</Text>
+        </View>
+          <TextInput value={confirmPassword}
+        onChangeText={setConfirmPassword} placeholder='e.g. john123' placeholderTextColor={'#0007'} secureTextEntry={true} style={{fontSize:14,width:'65%',paddingLeft:10,fontFamily:'Inter-Regular',color:"#000"}}/>
+        </View>
+        </View>
+
+    </View>
+
+    
+        
+      </View>
+      <TouchableOpacity onPress={handleRegister} activeOpacity={1} style={{
+        borderTopColor: '#000',
+        borderTopWidth: 1.5,
+        paddingVertical: 15,
+        width: '100%',
+        overflow: 'hidden',
+      }}>
+        <Text style={{ textAlign: 'center', fontSize: 20, color: '#000' }}>Register</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+export default SignUpScreen

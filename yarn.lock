@@ -2178,6 +2178,11 @@
   resolved "https://registry.yarnpkg.com/@react-native-firebase/firestore/-/firestore-19.1.1.tgz#c216763d155320ae96bd7e87f01479534ba11a93"
   integrity sha512-uWGxa98m+qJVVoQ/ZRg2qz35y2lsB8J4tuV6EqdxcemnFwdTa8aQcHUHkUDr73+DWoMWNdbOlvMhPyjtLG2piQ==
 
+"@react-native-firebase/storage@^19.1.2":
+  version "19.1.2"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/storage/-/storage-19.1.2.tgz#724da847e4d52cb3e2af3ba7b58af0834136dd45"
+  integrity sha512-wkM5mQBCeLcCsuig+NTYC4A0vaS006VwFOCzp9m0aKQ428SeDNn62Lv3FwX3IRaa9TPHWDIMTsRhq3gRYP7xqg==
+
 "@react-native-google-signin/google-signin@^10.1.2":
   version "10.1.2"
   resolved "https://registry.yarnpkg.com/@react-native-google-signin/google-signin/-/google-signin-10.1.2.tgz#0b26e98f52e5b11bcba05580472a134143cddf74"
@@ -6004,6 +6009,11 @@ node-stream-zip@^1.9.1:
   resolved "https://registry.yarnpkg.com/node-stream-zip/-/node-stream-zip-1.15.0.tgz#158adb88ed8004c6c49a396b50a6a5de3bca33ea"
   integrity sha512-LN4fydt9TqhZhThkZIVQnF9cwjU3qmUH9h78Mx/K7d3VvfRqqwthLwJEUOEL0QPZ0XQmNN7be5Ggit5+4dq3Bw==
 
+nodemailer@^6.9.13:
+  version "6.9.13"
+  resolved "https://registry.yarnpkg.com/nodemailer/-/nodemailer-6.9.13.tgz#5b292bf1e92645f4852ca872c56a6ba6c4a3d3d6"
+  integrity sha512-7o38Yogx6krdoBf3jCAqnIN4oSQFx+fMa0I7dK1D+me9kBxx12D+/33wSb+fhOCtIxvYJ+4x4IMEhmhCKfAiOA==
+
 nopt@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/nopt/-/nopt-5.0.0.tgz#530942bb58a512fccafe53fe210f13a25355dc88"
@@ -6491,6 +6501,16 @@ react-native-gesture-handler@^2.16.0:
     invariant "^2.2.4"
     lodash "^4.17.21"
     prop-types "^15.7.2"
+
+react-native-image-crop-picker@^0.40.3:
+  version "0.40.3"
+  resolved "https://registry.yarnpkg.com/react-native-image-crop-picker/-/react-native-image-crop-picker-0.40.3.tgz#a6b135cd1218a33ad126c1a148ec5a1bd01737ff"
+  integrity sha512-45PKcTnsnLS+E36YwoXutllQdRSOuOsMN0IRcAcwsFXOuAQIOtugXlAuGGL28JHKb/ATaSSPvqCSrdG65Jv3GA==
+
+react-native-image-picker@^7.1.2:
+  version "7.1.2"
+  resolved "https://registry.yarnpkg.com/react-native-image-picker/-/react-native-image-picker-7.1.2.tgz#383849d1953caf4578874a1f5e5dd11c737bd5cd"
+  integrity sha512-b5y5nP60RIPxlAXlptn2QwlIuZWCUDWa/YPUVjgHc0Ih60mRiOg1PSzf0IjHSLeOZShCpirpvSPGnDExIpTRUg==
 
 react-native-paper@^5.12.3:
   version "5.12.3"

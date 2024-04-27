@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,179 +8,166 @@ import {
   Image,
   Alert,
   Modal,
+  ToastAndroid,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { firebase } from '@react-native-firebase/auth';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import {firebase} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import arrowUpWhite from '../Images/arrowUpWhite.png';
-import checkWhite from '../Images/checkWhite.png';
-import deleteWhiteIcon from '../Images/deleteWhiteIcon.png';
+import deleteIcon from '../Images/deleteIcon.png';
+import editIcon from '../Images/editIcon.png';
+import leftArrowPng from '../Images/leftArrowPng.png';
+import saveIcon from '../Images/saveIcon.png';
 
-const NewNoteScreen = () => {
-  const [heading, setHeading] = useState('');
-  const [paragraph, setParagraph] = useState('');
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState('');
-  const [showTextInput, setShowTextInput] = useState(false);
-  const navigation = useNavigation();
-  const route = useRoute();
-  const currentUser = firebase.auth().currentUser;
+const NewNoteScreen = ({navigation, route}) => {
+  const [heading, setHeading] = useState(note ? note.heading : '');
+  const [paragraph, setParagraph] = useState(note ? note.paragraph : '');
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const userRef = firestore().collection('users').doc(currentUser.uid);
-        const unsubscribe = userRef.collection('categories').onSnapshot(snapshot => {
-          const categoriesData = snapshot.docs.map(doc => doc.data().name);
-          setCategories(categoriesData);
-        });
-        
-        // Clean up the listener when component unmounts
-        return () => unsubscribe();
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        Alert.alert('Error', 'Failed to fetch categories. Please try again.');
-      }
-    };
+  const [userUid, setUserUid] = useState('');
+  const {note} = route.params || {};
 
-    fetchCategories();
-  }, [currentUser.uid]);
-
-  useEffect(() => {
-    const { note } = route.params || {};
-    if (note) {
-      setHeading(note.heading);
-      setParagraph(note.paragraph);
-      setSelectedCategory(note.category);
-      setCurrentDateTime(new Date(note.timestamp)); // Convert timestamp to Date object
-    }
-  }, [route.params]);
-
-  const handleDelete = async () => {
-    try {
-      const { note } = route.params || {};
-      if (note && note.id) {
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('notes')
-          .doc(note.id)
-          .delete();
-        Alert.alert('Success', 'Note has been deleted successfully.');
-        navigation.navigate('mainScreen');
-      } else {
-        Alert.alert('Error', 'Unable to delete the note. Note ID not found.');
-      }
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      Alert.alert('Error', 'Failed to delete the note. Please try again.');
-    }
+  // Get current date and time
+  const currentDateTime = new Date();
+  const showToastWithGravity = errorMessage => {
+    ToastAndroid.showWithGravity(
+      errorMessage,
+      ToastAndroid.SHORT,
+      ToastAndroid.CENTER,
+    );
   };
-  
-  const handleNavigateToHomePage = async () => {
+
+  useEffect(() => {
+    // Fetch the current user's UID
+    const currentUser = firebase.auth().currentUser;
+    if (currentUser) {
+      setUserUid(currentUser.uid);
+    }
+  }, []);
+
+  const handleNavigateToHomePage = () => {
+    handleSaveNote();
     navigation.navigate('mainScreen');
   };
 
-  const handleSave = async () => {
+  const handleSaveNote = async () => {
     try {
-      const { note, onUpdateNote } = route.params || {};
-      const currentDate = new Date();
-      const formattedDateTime = currentDate.toLocaleString();
+      // Check if heading or paragraph is empty
+      if (!heading.trim() || !paragraph.trim()) {
+        return;
+      }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      // Get the current user's UID
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        showToastWithGravity('User not found');
+        return;
+      }
+      const userUid = currentUser.uid;
 
-      if (note && note.id) {
-        await userDocRef.collection('notes').doc(note.id).update({
-          heading,
-          paragraph,
-          timestamp: formattedDateTime,
-          category: selectedCategory,
-        });
-        const updatedNote = {
-          ...note,
-          heading,
-          paragraph,
-          timestamp: formattedDateTime,
-          category: selectedCategory,
-        };
-        onUpdateNote(updatedNote);
+      if (note) {
+        // Update existing note
+        await firestore()
+          .collection('users')
+          .doc(userUid)
+          .collection('notes')
+          .doc(note.id)
+          .update({
+            heading: heading,
+            paragraph: paragraph,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        showToastWithGravity('Your note has been updated successfully');
+        navigation.navigate('mainScreen');
       } else {
-        await userDocRef.collection('notes').add({
-          heading,
-          paragraph,
-          timestamp: formattedDateTime,
-          category: selectedCategory,
-        });
+        // Save new note
+        // Get the total number of notes to determine the next note number
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(userUid)
+          .get();
+        const userData = userDoc.data();
+        const totalNotes = userData?.totalNotes || 0;
+
+        // Save the note data to Firestore under the user's UID with the next note number as the document ID
+        await firestore()
+          .collection('users')
+          .doc(userUid)
+          .collection('notes')
+          .doc(`note${totalNotes + 1}`)
+          .set({
+            heading: heading,
+            paragraph: paragraph,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+
+        // Increment totalNotes in the user's document
+        await firestore()
+          .collection('users')
+          .doc(userUid)
+          .update({
+            totalNotes: totalNotes + 1,
+          });
+        showToastWithGravity('Your note has been saved successfully');
       }
 
-      const categoryExists = categories.includes(selectedCategory);
-      if (!categoryExists) {
-        await userDocRef.collection('categories').add({
-          name: selectedCategory,
-        });
-        setCategories([...categories, selectedCategory]);
-      }
-
-      Alert.alert('Success', 'Note has been saved successfully.');
+      // Clear the input fields
       setHeading('');
       setParagraph('');
       navigation.navigate('mainScreen');
     } catch (error) {
-      console.error('Error saving note:', error);
-      Alert.alert('Error', 'Failed to save the note. Please try again.');
+      console.error('Error saving note: ', error);
+      showToastWithGravity(
+        'An error occurred while saving your note. Please try again later.',
+      );
     }
   };
 
-  const handleOpenModal = () => {
-    setModalVisible(true);
-  };
+  // Populate the input fields with the note details
+  useEffect(() => {
+    if (note) {
+      setHeading(note.heading);
+      setParagraph(note.paragraph);
+    }
+  }, [note]);
 
-  const handleCategorySelection = (category) => {
-    setSelectedCategory(category);
-    setModalVisible(false);
-  };
-
-  const handleAddCategory = () => {
-    setNewCategory('');
-    setShowTextInput(true);
-    setModalVisible(true);
-  };
-
-  const handleSaveNewCategory = async () => {
+  const handleDeleteNote = async () => {
     try {
-      if (newCategory.trim() !== '') {
-        await firestore()
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        showToastWithGravity('User not found');
+        return;
+      }
+      const userUid = currentUser.uid;
+
+      if (note) {
+        const batch = firestore().batch();
+
+        // Delete the note document
+        const noteRef = firestore()
           .collection('users')
-          .doc(currentUser.uid)
-          .collection('categories')
-          .add({
-            name: newCategory.trim(),
-          });
-        setCategories([...categories, newCategory.trim()]);
-        setShowTextInput(false);
-        setModalVisible(false);
+          .doc(userUid)
+          .collection('notes')
+          .doc(note.id);
+        batch.delete(noteRef);
+
+        // Decrement totalNotes in the user's document
+        const userRef = firestore().collection('users').doc(userUid);
+        batch.update(userRef, {
+          totalNotes: firebase.firestore.FieldValue.increment(-1),
+        });
+
+        // Commit the batched transaction
+        await batch.commit();
+
+        showToastWithGravity('Your note has been deleted successfully');
+        navigation.navigate('mainScreen');
+      } else {
+        showToastWithGravity('No note found to delete');
       }
     } catch (error) {
-      console.error('Error saving category:', error);
-      Alert.alert('Error', 'Failed to save the category. Please try again.');
-    }
-  };
-
-  const handleDeleteCategory = async (category) => {
-    try {
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('categories')
-        .doc(category)
-        .delete();
-      setCategories(categories.filter(cat => cat !== category));
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      Alert.alert('Error', 'Failed to delete the category. Please try again.');
+      console.error('Error deleting note: ', error);
+      showToastWithGravity(
+        'An error occurred while deleting your note. Please try again later.',
+      );
     }
   };
 
@@ -188,77 +175,46 @@ const NewNoteScreen = () => {
     <View style={styles.container}>
       <View style={styles.button}>
         <TouchableOpacity onPress={handleNavigateToHomePage}>
-          <Image source={arrowUpWhite} style={styles.icon} />
+          <Image source={leftArrowPng} style={{...styles.icon_}} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleDelete}>
-          <Image source={deleteWhiteIcon} style={styles.icon} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSave}>
-          <Image source={checkWhite} style={styles.icon} />
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity style={styles.categoryContainer} onPress={handleOpenModal}>
-        <Text style={styles.categoryText}>{selectedCategory || 'No Category'}</Text>
-      </TouchableOpacity>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Select Category</Text>
-            {categories.map((category, index) => (
-              <TouchableOpacity key={index} onPress={() => handleCategorySelection(category)}>
-                <View style={styles.categoryRow}>
-                  <Text style={styles.categoryOption}>{category}</Text>
-                  <TouchableOpacity onPress={() => handleDeleteCategory(category)}>
-                    <Text style={styles.deleteButton}>-</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
-            {showTextInput ? (
-              <View>
-                <TextInput
-                  style={styles.categoryInput}
-                  placeholder="Enter new category"
-                  value={newCategory}
-                  onChangeText={setNewCategory}
-                  placeholderTextColor="#ccc"
-                />
-                <TouchableOpacity onPress={handleSaveNewCategory}>
-                  <Text style={styles.categoryOption}>Save Category</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity onPress={handleAddCategory}>
-                <Text style={styles.categoryOption}>+ Add Category</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        <View style={{flexDirection: 'row', gap: 20}}>
+          <TouchableOpacity onPress={handleSaveNote}>
+            <Image source={saveIcon} style={{...styles.icon_}} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleNavigateToHomePage}>
+            <Image source={editIcon} style={{...styles.icon_}} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleDeleteNote}>
+            <Image source={deleteIcon} style={{...styles.icon_}} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </View>
+
       <TextInput
-        style={[styles.input, styles.headingInput]}
+        style={{...styles.input, fontWeight: 'bold'}}
         placeholder="Title"
         value={heading}
-        onChangeText={(text) => setHeading(text)}
-        placeholderTextColor={'#fff4'}
+        onChangeText={text => setHeading(text)}
+        placeholderTextColor={'#C7C7C7'}
       />
       <View style={styles.dateTimeContainer}>
-        <Text style={styles.dateTimeText}>{currentDateTime.toLocaleDateString()}</Text>
-        <Text style={styles.dateTimeText}>{currentDateTime.toLocaleTimeString()}</Text>
+        <Text style={styles.dateTimeText}>
+          {currentDateTime.toLocaleDateString()}
+        </Text>
+        <Text style={styles.dateTimeText}>
+          {currentDateTime.toLocaleTimeString()}
+        </Text>
       </View>
       <View style={styles.paragraphContainer}>
         <TextInput
           style={[styles.input, styles.paragraphInput]}
-          placeholder="Start typing..."
+          placeholder="Write something..."
           multiline
           value={paragraph}
-          onChangeText={(text) => setParagraph(text)}
-          placeholderTextColor={'#fff4'}
+          onChangeText={text => setParagraph(text)}
+          placeholderTextColor={'#C7C7C7'}
           textAlignVertical="top"
           height="100%"
         />
@@ -274,7 +230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'white',
   },
   button: {
     width: '100%',
@@ -282,84 +238,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    paddingHorizontal: 10,
   },
   icon: {
     width: 20,
     height: 20,
     resizeMode: 'cover',
   },
-  categoryContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: '#fff2',
-    backgroundColor: '#222',
+  icon_: {
+    width: 35,
+    height: 35,
+    resizeMode: 'cover',
   },
-  categoryText: {
-    color: '#DEDEDE',
-    fontSize: 16,
-    textAlign: 'left',
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 22,
-  },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
-    fontSize: 18,
+  headingInput: {
     fontWeight: 'bold',
-  },
-  categoryOption: {
-    marginTop: 10,
-    fontSize: 16,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  deleteButton: {
-    color: '#1e1e1e',
-    fontSize: 25,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  categoryInput: {
-    marginBottom: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    width: '100%',
   },
   input: {
     width: '100%',
     borderRadius: 5,
     padding: 12,
-    color: 'white',
-    fontSize: 24,
-  },
-  headingInput: {
-    marginBottom: 10,
+    color: '#000',
+    fontSize: 22,
+    fontFamily: 'Inter-Bold',
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -369,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   dateTimeText: {
-    color: '#fff8',
+    color: '#DADADA',
   },
   paragraphContainer: {
     position: 'relative',
@@ -379,8 +279,9 @@ const styles = StyleSheet.create({
   },
   paragraphInput: {
     height: '100%',
-    fontSize: 18,
+    fontSize: 14,
     position: 'relative',
+    fontFamily: 'Inter-Regular',
   },
 });
 
